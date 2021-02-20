@@ -32,7 +32,7 @@ export default {
 }
 </script>
 
-<style>
+<style >
  .tab-control {
      display: flex;
      height: 44px;

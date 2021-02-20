@@ -1,11 +1,15 @@
 <template>
   <div id="home">
-    <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
-    <home-swiper :banners="banners"></home-swiper>
-    <recommend-view :recommends="recommends"></recommend-view>
-    <feature-view></feature-view>
-    <tab-control class = "tab-control" :titles = "['流行','新款','精选']" @tabClick = 'tabClick'></tab-control>
-    <goods-list :goods = "showGoods"/>    
+     <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
+      <scroll class="content" ref="scroll" :probeType="3" @scroll="contentScroll" :pullUpLoad="true" @pullingUp="loadMore">
+        <home-swiper :banners="banners"></home-swiper>
+        <recommend-view :recommends="recommends"></recommend-view>
+        <feature-view></feature-view>
+        <tab-control class = "tab-control" :titles = "['流行','新款','精选']" @tabClick = 'tabClick'></tab-control>
+        <goods-list :goods = "showGoods"/>  
+      </scroll>
+      <back-top @click.native="backClick" v-show="isShowBackTop"></back-top>
+  
   </div>
 </template>
 
@@ -18,8 +22,11 @@ import FeatureView from './homeComps/FeatureView'
 import NavBar from 'components/common/navbar/NavBar.vue'
 import TabControl from 'components/content/tabcontrol/TabControl.vue'
 import GoodsList from 'components/content/goods/GoodsList.vue'
+import Scroll from 'components/common/scroll/Scroll.vue'
+
 
 import { getHomeMultidata , getHomeGoods} from 'network/home.js'
+import BackTop from 'components/content/backTop/BackTop.vue'
 
 export default {
   name: 'Home',
@@ -30,7 +37,13 @@ export default {
 
     NavBar,
     TabControl,
-    GoodsList
+    GoodsList,
+    Scroll,
+    BackTop
+
+   
+    
+   
     },
   data() {
     return {
@@ -41,7 +54,8 @@ export default {
         'new': {page: 0, list: []},
         'sell': {page: 0, list: []}
       },
-      currentType: 'pop'
+      currentType: 'pop',
+      isShowBackTop: false
     }
   },
     created() {
@@ -72,9 +86,21 @@ export default {
           break;
         case 2:
           this.currentType = 'sell'
-          break
+          break;
       }
        
+    },
+    backClick() {
+      this.$refs.scroll.scrollTo(0,0)
+      // 也可以这样写：this.$refs.scroll(这里是拿到叫ref名字叫scroll的组件，通过ref可以访问组件里的属性和方法).scroll（拿到组件里的scroll，即BScroll）.scrollTo(0,0)（访问bscroll自带的scrollTo方法）
+    },
+    contentScroll(position) {
+      this.isShowBackTop = (-position.y) > 1000
+    },
+    loadMore() {
+      // console.log('上拉加载更多')
+      this.getHomeGoods(this.currentType)
+      this.$refs.scroll.scroll.refresh()  //上拉加载一次后刷新，不然滚动不上去
     },
     /**
      * 网络请求的
@@ -82,7 +108,6 @@ export default {
       getHomeMultidata() {
          getHomeMultidata().then(
           res => {   //请求到的结果保存到res里面，函数里面的结果在函数调用执行完后就会被删除掉了，所以要把结果给保存起来，在data里定义banners和recommends保存起来
-            console.log(res)
             this.banners = res.data.banner.list
             this.recommends = res.data.recommend.list 
         }
@@ -95,6 +120,8 @@ export default {
             res => {
                this.goods[type].list.push(...res.data.list)  
                this.goods[type].page += 1   //把goods里面的page改成1，下次请求就是从1开始，而不是0了
+
+               this.$refs.scroll.finishPullUp()
             }            
          )
        }
@@ -107,22 +134,38 @@ export default {
 
 </script>
 
-<style>
-   #home {
-     padding-top: 44px;
-   }
-   .home-nav {
-     background-color: var(--color-tint);
-     color: #fff;
-     position: fixed;
-     left: 0;
-     top: 0;
-     right: 0;
-     z-index: 9;
-   }
-   .tab-control {
-     position: sticky;
-     top: 44px;
-     z-index: 9;
-   }
+<style scoped>
+/* scoped表明这些样式的作用域就是这个界面 */
+    #home {
+    /*padding-top: 44px;*/
+    height: 100vh;
+    position: relative;
+  }
+
+  .home-nav {
+    background-color: var(--color-tint);
+    color: #fff;
+
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    z-index: 9;
+  }
+
+  .tab-control {
+    position: sticky;
+    top: 44px;
+    z-index: 9;
+  }
+
+  .content {
+    overflow: hidden;
+
+    position: absolute;
+    top: 44px;
+    bottom: 49px;
+    left: 0;
+    right: 0;
+  }
 </style>
