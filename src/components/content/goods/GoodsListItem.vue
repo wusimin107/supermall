@@ -1,6 +1,6 @@
 <template>
   <div class="goods-item">
-      <img :src="goodsItem.show.img" alt="">
+      <img :src="goodsItem.show.img" alt="" @load="imageLoad" @click="itemClick">
       <!-- goodsItem是一个个对象 -->
       <div class="goods-info">
           <p>{{goodsItem.title}}</p>
@@ -21,11 +21,26 @@ export default {
               return {}
           }
       }
-  }
+  },
+  methods: {
+      imageLoad() {
+          this.$bus.$emit('itemImageLoad')   
+          /**
+           * @load监听图片加载完成,执行itemImageLoad方法,把完成的信号发送出去,调用scroll里的refresh方法,
+           * 让scrollerHeight高度进行更新,在这个组件是调用不了refresh,(就算通过父子组件通信来解决,但是这里是孙子了,比较麻烦通信)
+           * 目前只有home组件可以调用refresh,通过事件总线$bus可以解决这个问题;
+           * this.$bus.$emit('itemImageLoad')  发送到事件总线那里,home那边通过this.$bus.$on('事件',function)监听
+          */
+
+      },
+      itemClick() {
+          this.$router.push('/detail/' + this.goodsItem.iid)
+      }
+  },
 }
 </script>
 
-<style>
+<style scoped>
   .goods-item {
       padding-bottom: 40px;
       position: relative;

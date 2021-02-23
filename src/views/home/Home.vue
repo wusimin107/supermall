@@ -1,11 +1,16 @@
 <template>
   <div id="home">
      <nav-bar class="home-nav"><div slot="center">购物街</div></nav-bar>
-      <scroll class="content" ref="scroll" :probeType="3" @scroll="contentScroll" :pullUpLoad="true" @pullingUp="loadMore">
-        <home-swiper :banners="banners"></home-swiper>
+      <tab-control :titles = "['流行','新款','精选']"
+         @tabClick = 'tabClick' ref="tabControl2" class = "tab-control" v-show="isTabFixed" >
+         </tab-control>
+      <scroll class="content" ref="scroll" :probeType="3" @scroll="contentScroll":pullUpLoad="true" @pullingUp="loadMore">
+        <home-swiper :banners="banners"  @swiperImageLoad='swiperImageLoad'></home-swiper>
         <recommend-view :recommends="recommends"></recommend-view>
         <feature-view></feature-view>
-        <tab-control class = "tab-control" :titles = "['流行','新款','精选']" @tabClick = 'tabClick'></tab-control>
+        <tab-control  :titles = "['流行','新款','精选']"
+         @tabClick = 'tabClick' ref="tabControl1">
+         </tab-control>
         <goods-list :goods = "showGoods"/>  
       </scroll>
       <back-top @click.native="backClick" v-show="isShowBackTop"></back-top>
@@ -23,6 +28,7 @@ import NavBar from 'components/common/navbar/NavBar.vue'
 import TabControl from 'components/content/tabcontrol/TabControl.vue'
 import GoodsList from 'components/content/goods/GoodsList.vue'
 import Scroll from 'components/common/scroll/Scroll.vue'
+import {debounce} from 'common/utils/utils.js'
 
 
 import { getHomeMultidata , getHomeGoods} from 'network/home.js'
@@ -55,7 +61,10 @@ export default {
         'sell': {page: 0, list: []}
       },
       currentType: 'pop',
-      isShowBackTop: false
+      isShowBackTop: false,
+      tabOffsetTop: 0,
+      isTabFixed: false,
+      saveY: 0
     }
   },
     created() {
@@ -65,7 +74,22 @@ export default {
      this.getHomeGoods('pop')
      this.getHomeGoods('new')
      this.getHomeGoods('sell')
-  
+    },
+    mounted() {
+       //3.监听图片是否加载完成
+       const refresh = debounce(this.$refs.scroll.refresh)
+     this.$bus.$on('itemImageLoad', () => {
+       refresh()
+     })
+    },
+    activated() {
+      this.$refs.scroll.scrollTo(0,this.saveY,0)
+      this.$refs.scroll.refresh()  
+    },
+    deactivated() {
+      this.saveY = this.$refs.scroll.getScrollY()
+     
+        
     },
     computed: {
       showGoods() {
@@ -88,6 +112,9 @@ export default {
           this.currentType = 'sell'
           break;
       }
+      this.$refs.tabControl1.currentIndex = index
+      this.$refs.tabControl2.currentIndex = index
+
        
     },
     backClick() {
@@ -95,12 +122,21 @@ export default {
       // 也可以这样写：this.$refs.scroll(这里是拿到叫ref名字叫scroll的组件，通过ref可以访问组件里的属性和方法).scroll（拿到组件里的scroll，即BScroll）.scrollTo(0,0)（访问bscroll自带的scrollTo方法）
     },
     contentScroll(position) {
+      //1.判断上拉加载更多那个箭头什么时候显示
       this.isShowBackTop = (-position.y) > 1000
+      //2.判断tabControl什么时候吸顶（大于tabOffsetTop）
+      this.isTabFixed = (-position.y) > this.tabOffsetTop
     },
+    
     loadMore() {
       // console.log('上拉加载更多')
       this.getHomeGoods(this.currentType)
       this.$refs.scroll.scroll.refresh()  //上拉加载一次后刷新，不然滚动不上去
+    },
+    swiperImageLoad() {
+      //由于图片加载较慢，offsetTop一开始获取的值可能是图片没加载完成的，基本上轮播图加载完成了，图片也就完成了，
+      //所以监听轮播图加载完成发出的swiperimageload事件
+      this.tabOffsetTop = this.$refs.tabControl1.$el.offsetTop
     },
     /**
      * 网络请求的
@@ -153,11 +189,11 @@ export default {
     z-index: 9;
   }
 
-  .tab-control {
+  /* .tab-control {
     position: sticky;
     top: 44px;
     z-index: 9;
-  }
+  } */
 
   .content {
     overflow: hidden;
@@ -167,5 +203,10 @@ export default {
     bottom: 49px;
     left: 0;
     right: 0;
+  }
+  .tab-control {
+    position: relative;
+    z-index: 9;
+    top: 44px;
   }
 </style>
