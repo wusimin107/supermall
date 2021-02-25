@@ -29,6 +29,7 @@ import TabControl from 'components/content/tabcontrol/TabControl.vue'
 import GoodsList from 'components/content/goods/GoodsList.vue'
 import Scroll from 'components/common/scroll/Scroll.vue'
 import {debounce} from 'common/utils/utils.js'
+import {itemListenerMixin} from 'common/utils/mixin.js'
 
 
 import { getHomeMultidata , getHomeGoods} from 'network/home.js'
@@ -45,11 +46,7 @@ export default {
     TabControl,
     GoodsList,
     Scroll,
-    BackTop
-
-   
-    
-   
+    BackTop 
     },
   data() {
     return {
@@ -64,31 +61,48 @@ export default {
       isShowBackTop: false,
       tabOffsetTop: 0,
       isTabFixed: false,
-      saveY: 0
+      saveY: 0,
+      // itemImgListener: null  mixins对象复用了
     }
   },
+  mixins: [itemListenerMixin],
     created() {
       //1.请求多个数据（轮播图和推荐的）
      this.getHomeMultidata()
-     //2.请求流行/新款/精选的数据
+     //2.请求流行/新款/精选的数据des
      this.getHomeGoods('pop')
      this.getHomeGoods('new')
      this.getHomeGoods('sell')
     },
     mounted() {
+      console.log('home的mounted')
        //3.监听图片是否加载完成
-       const refresh = debounce(this.$refs.scroll.refresh)
-     this.$bus.$on('itemImageLoad', () => {
-       refresh()
-     })
+    /**    const refresh = debounce(this.$refs.scroll.refresh)
+           this.itemImgListener = () => {
+              refresh()
+           }
+           this.$bus.$on('itemImageLoad', this.itemImgListener)
+           这里面的代码，在home这里会使用，在detail里面也会使用，以后需要用到goodsitem的时候也需要使用，所以重复性很高，
+           可以对它进行抽离，两个组件之间想复用代码的话，通过混入mixins来复用的，
+           【mixins就是用来更高效的实现组件内容的复用，在使用mixin的组件中引入后，mixin中的方法和属性也就并入到该组件中，
+           可以直接使用。钩子函数会两个都被调用，mixin中的钩子首先执行；即你创建的mixins.js是作用在mounted，到时后导入在一个组件里，
+           这个组件本身mounted也有东西执行，结果是两个都会被执行
+           。】
+    */ 
+    
+
     },
     activated() {
       this.$refs.scroll.scrollTo(0,this.saveY,0)
       this.$refs.scroll.refresh()  
     },
     deactivated() {
+      //保存y值
       this.saveY = this.$refs.scroll.getScrollY()
-     
+     //取消全局事件的监听（goodsitem组件里的image加载完成都会发送itemImageLoad事件，然后在home.vue里监听刷新，在详情页里也用了goodsitem的组件
+     //也需要刷新才能滚动，但是它那边的图片加载完，通知的是home刷新，我们不应该通知home页面刷新，应该通知详情页面刷新，所以从home点击进入到
+     //详情页的时候，home应该都已经刷新完成了，所以在离开home时，我们应该取消这个传送过来的事件itemImageLoad所执行的函数）,之后谁需要监听itemImageLoad事件，就在谁的mounted里监听
+     this.$bus.$off('itemImageLoad', this.itemImgListener)
         
     },
     computed: {
