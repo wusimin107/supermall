@@ -1,4 +1,6 @@
 import {debounce} from 'common/utils/utils.js'
+import BackTop from 'components/content/backTop/BackTop.vue'
+//监听goodsitem的图片是否加载完成
 export const itemListenerMixin = {
     data() {
         return {
@@ -31,4 +33,21 @@ export const itemListenerMixin = {
    */
     }
  
+}
+
+export const backTopMixin = {
+    data() {
+        return {
+            isShowBackTop: false,
+        }
+    },
+    components: {
+       BackTop
+    },
+    methods: {
+        backClick() {
+         this.$refs.scroll.scrollTo(0,0)
+        },
+        
+    }
 }
